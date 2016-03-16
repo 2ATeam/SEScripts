@@ -12,12 +12,14 @@ namespace SE_Mods.CommandRunner
         /// </summary>
         protected Argument PrimaryArgumentAngle { get; set; }
 
+        protected Argument Velocity { get; set; }
+
         public RotateCommand(MyGridProgram environment, params Argument[] args) : base(environment, CommandType.AA_Rotate, args) {}
 
         // Add angle arguments to acceptable list.
         protected override bool IsAcceptableArgument(ArgumentType arg)
         {
-            return (arg == ArgumentType.AA_ByAngle || arg == ArgumentType.AA_ToAngle || base.IsAcceptableArgument(arg));
+            return (arg == ArgumentType.AA_ByAngle || arg == ArgumentType.AA_ToAngle || arg == ArgumentType.AA_Velocity || base.IsAcceptableArgument(arg));
         }
 
         // Validate angle arguments.
@@ -36,11 +38,15 @@ namespace SE_Mods.CommandRunner
             if (!float.TryParse(PrimaryArgumentAngle.Value, out angleValue)) Log("Invalid angle format");
         }
 
-        public override void Run(MyGridProgram environment)
+        public override void Run(MyGridProgram environment = null)
         {
+            if (environment != null) Environment = environment;
             if (!IsValid) { Log(string.Format("Command {0} is invalid", Type)); return; }
             float angle = float.Parse(PrimaryArgumentAngle.Value);
             bool cumulative = (PrimaryArgumentAngle.Type == ArgumentType.AA_ByAngle);
+            float velocity = 0;
+            Velocity = arguments[ArgumentType.AA_Velocity];
+            if (Velocity != null) float.TryParse(Velocity.Value, out velocity);
             if (PrimaryArgumentKey.Type == ArgumentType.AA_Group)
             {
                 IMyBlockGroup group = Environment.GridTerminalSystem.GetBlockGroupWithName(PrimaryArgumentKey.Value);
@@ -48,14 +54,14 @@ namespace SE_Mods.CommandRunner
                 for (int i = 0; i < group.Blocks.Count; i++)
                 {
                     IMyMotorStator rotor = group.Blocks[i] as IMyMotorStator;
-                    if (rotor != null) RotateRotor(rotor, angle, cumulative);
+                    if (rotor != null) RotateRotor(rotor, angle, cumulative, velocity);
                     else Log(string.Format("Rotating group {0} : Group has non-rotor block.", PrimaryArgumentKey.Value));
                 }
             }
             if (PrimaryArgumentKey.Type == ArgumentType.AA_Name)
             {
                 IMyMotorStator rotor = Environment.GridTerminalSystem.GetBlockWithName(PrimaryArgumentKey.Value) as IMyMotorStator;
-                if (rotor != null) RotateRotor(rotor, angle, cumulative);
+                if (rotor != null) RotateRotor(rotor, angle, cumulative, velocity);
                 else { Log(string.Format("Specified rotor not found: {0}", PrimaryArgumentKey.Value)); return; }
             }
             if (PrimaryArgumentKey.Type == ArgumentType.AA_Tag)
@@ -64,7 +70,7 @@ namespace SE_Mods.CommandRunner
                 List<IMyMotorStator> rotors = Utils.GetRotorsWithTag(PrimaryArgumentKey.Value, environment);
                 if (rotors.Count == 0) { Log(string.Format("No rotors with tag \"{0}\" were found", PrimaryArgumentKey.Value)); return; }
                 for (int i = 0; i < rotors.Count; i++)
-                    RotateRotor(rotors[i], angle, cumulative);
+                    RotateRotor(rotors[i], angle, cumulative, velocity);
             }
         }
         /// <summary>
@@ -76,18 +82,18 @@ namespace SE_Mods.CommandRunner
         /// <param name="velocity">Custom velocity of rotor.</param>
         protected void RotateRotor(IMyMotorStator rotor, float angle, bool cumulativeAngle = true, float velocity = 1.0f)
         {
-            float curAngle = GetCurrentAngle(rotor);
-            Log(string.Format("Angle: {0}", curAngle));
-            float resAngle = (cumulativeAngle ? (curAngle + angle) : angle) % 360;
-            if (angle < 0) rotor.SetValueFloat("LowerLimit", resAngle);
-            else if (angle > 0) rotor.SetValueFloat("UpperLimit", resAngle);
-            rotor.SetValueFloat("Velocity", Math.Abs(velocity) * Math.Sign(angle));
-        }
+            if (velocity == 0) velocity = 1.0f; // set default velocity.
+            string limit = (angle < 0 ? "LowerLimit" : "UpperLimit");
+            float curAngle = rotor.GetValueFloat(limit);
+            Log(string.Format("Current angle: {0}", curAngle));
+            Log(string.Format("Specified angle: {0} ({1})", angle, (cumulativeAngle ? "increment"  : " exact value")));
+            float resAngle = (cumulativeAngle ? (curAngle + angle) : angle);
+            resAngle -= (int)(resAngle / 360) * 360.0f;
 
-        protected float GetCurrentAngle(IMyMotorStator rotor)
-        {
-            string angle = System.Text.RegularExpressions.Regex.Replace(rotor.DetailedInfo, "[^.0-9]", "");
-            return float.Parse(angle);
+            Log(string.Format("Set angular limits to {0}", resAngle));
+            rotor.SetValueFloat("LowerLimit", resAngle);
+            rotor.SetValueFloat("UpperLimit", resAngle);
+            rotor.SetValueFloat("Velocity", Math.Abs(velocity) * Math.Sign(resAngle - curAngle));
         }
     }
 }

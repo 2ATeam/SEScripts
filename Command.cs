@@ -56,7 +56,7 @@ namespace SE_Mods.CommandRunner
         /// </summary>
         public CommandType Type { get; protected set; }
 
-        public MyGridProgram Environment { get; private set; }
+        public MyGridProgram Environment { get; protected set; }
 
         public bool IsValid { get; protected set; }
 
@@ -121,7 +121,7 @@ namespace SE_Mods.CommandRunner
         /// Implements actually command's logic.
         /// </summary>
         /// <param name="environment"> Script environment.</param>
-        public abstract void Run(MyGridProgram environment);
+        public abstract void Run(MyGridProgram environment = null);
 
         /// <summary>
         /// Checks whether this argument is acceptable by current command.

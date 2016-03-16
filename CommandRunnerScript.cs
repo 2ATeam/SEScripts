@@ -12,8 +12,7 @@ namespace SE_Mods.CommandRunner
         /// </summary>
         public void Main(string args)
         {
-            var c = CommandBuilder.BuildCommand(this, args);
-            c.Run(this);
+            CommandBuilder.BuildCommand(this, args).Run();
         }
     }
 }

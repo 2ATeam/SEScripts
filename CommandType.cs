@@ -4,12 +4,12 @@ namespace SE_Mods.CommandRunner
 {
     /// <summary>
     /// Defines commands.
-    /// Note: This is replacement for enums, since enum is not supported in Space Engineers Scripting.
+    /// Note: This is a replacement for enums, since enum is not supported in Space Engineers Scripting.
     /// </summary>
     class CommandType
     {
         // Names of commands
-        private const string AA_Rotate_Name = "AA_Rotate";
+        private const string AA_Rotate_Name = "AA_Rotate";  /// Rotation command designed to rotate target rotors to or by specified angle.
 
         // Commands
         public static CommandType AA_Rotate { get { return AA_Rotate_Name; } }  // Rotate. Applied to rotors.
