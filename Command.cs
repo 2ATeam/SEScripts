@@ -130,19 +130,17 @@ namespace SE_Mods.CommandRunner
         /// <returns>Returns flag indicating whether this argument type acceptable or not.</returns>
         protected virtual bool IsAcceptableArgument(ArgumentType arg)
         {
-            return (arg == ArgumentType.AA_Group || arg == ArgumentType.AA_Name || arg == ArgumentType.AA_Tag || arg == ArgumentType.AA_Log);
+            return (arg == ArgumentType.AA_Group || arg == ArgumentType.AA_Name || arg == ArgumentType.AA_Tag || arg == ArgumentType.AA_LogName);
         }
 
        
         /// <summary>
-        /// Logs message to specified panel if set. In case critical message was received - throws excpetion of type T containing that message.
+        /// Logs message to specified panel if set and echoes it to programmable block output.
         /// </summary>
-        /// <typeparam name="T">Type of exception to be thrown. </typeparam>
         /// <param name="message">Message.</param>
-        /// <param name="isCritical">Flag indicating whether this message is critical to command execution. </param>
         protected void Log(string message)
         {
-            string logPanel = arguments.GetValueOrDefault(ArgumentType.AA_Log).Value;
+            string logPanel = arguments.GetValueOrDefault(ArgumentType.AA_LogName).Value;
             IMyTextPanel panel = Environment.GridTerminalSystem.GetBlockWithName(logPanel) as IMyTextPanel;
             if (panel != null)
             {

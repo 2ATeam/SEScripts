@@ -106,14 +106,14 @@ namespace Assembled.SE_Mods.CommandRunner
 	    {                                                                       //  G1          G2
 	        private const string ARG_TEMPLATE = "([^:;]+)\\s*:\\s*([^:;]+)";    // ARG_NAME : ARG_VALUE
 	
-	        public static Argument BuildArgument(string strArg)
+	        public static Argument BuildArgument(Sandbox.ModAPI.Ingame.MyGridProgram environment, string strArg)
 	        {
 	            System.Text.RegularExpressions.Match match = new System.Text.RegularExpressions.Regex(ARG_TEMPLATE).Match(strArg);
 	            if (match.Success)
 	            {
 	                string name = match.Groups[1].Value.Trim();
 	                ArgumentType type = name;
-	                if (type == null) throw new ArgumentException("Unknown argument: " + name);
+	                if (type == null) { environment.Echo(string.Format("Unknown argument: {0}", name)); return null; }
 	                string value = match.Groups[2].Value.Trim();
 	                return new Argument(type, value);
 	            }
@@ -253,11 +253,9 @@ namespace Assembled.SE_Mods.CommandRunner
 	
 	       
 	        /// <summary>
-	        /// Logs message to specified panel if set. In case critical message was received - throws excpetion of type T containing that message.
+	        /// Logs message to specified panel if set and echoes it to programmable block output.
 	        /// </summary>
-	        /// <typeparam name="T">Type of exception to be thrown. </typeparam>
 	        /// <param name="message">Message.</param>
-	        /// <param name="isCritical">Flag indicating whether this message is critical to command execution. </param>
 	        protected void Log(string message)
 	        {
 	            string logPanel = arguments.GetValueOrDefault(ArgumentType.AA_Log).Value;
@@ -382,7 +380,6 @@ namespace Assembled.SE_Mods.CommandRunner
 	        /// <summary>
 	        /// Builds command from given string. If any error occurs.
 	        /// </summary>
-	        /// <exception cref="ArgumentException">Throws ArgumentException if any parsing error occurs. </exception>
 	        /// <param name="strCmd"> Incoming string argument.</param>
 	        /// <returns> Returns command object which can be run. </returns>
 	        public static Command BuildCommand(MyGridProgram environment, string strCmd)
@@ -393,27 +390,29 @@ namespace Assembled.SE_Mods.CommandRunner
 	                Command cmd;
 	                string name = match.Groups[1].Value.Trim();
 	                CommandType type = name;
-	                if (type == null) throw new ArgumentException("Unknown command: " + name);
+	                if (type == null) { environment.Echo(string.Format("Unknown command: {0}", name)); return null; }
 	
 	                List<Argument> arguments = new List<Argument>();
 	                System.Text.RegularExpressions.Group args = match.Groups[2];
 	                for (int i = 0; i < args.Captures.Count; ++i)
 	                {
-	                    arguments.Add(ArgumentBuilder.BuildArgument(args.Captures[i].Value));
+	                    Argument arg = ArgumentBuilder.BuildArgument(environment, args.Captures[i].Value.Trim());
+	                    if (arg == null) continue;
+	                    arguments.Add(arg);
 	                }
+	                    
 	                return GetCommand(environment, type, arguments.ToArray());
-	
 	            }
 	            else
 	            {
-	                throw new ArgumentException("Invalid command string");
+	                environment.Echo("Invalid command string");
+	                return null;
 	            }
 	        }
 	
 	        private static Command GetCommand(MyGridProgram environment, CommandType type, params Argument[] args)
 	        {
 	            if (type == CommandType.AA_Rotate) return new RotateCommand(environment, args);
-	
 	            return null;
 	        }
 	    }

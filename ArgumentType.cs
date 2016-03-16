@@ -11,15 +11,19 @@ namespace SE_Mods.CommandRunner
         // Names of arguments
         private const string AA_Name_Name = "AA_Name";          // Name
         private const string AA_Tag_Name = "AA_Tag";            // Tag
-        private const string AA_Log_Name = "AA_Log";            // Log
+        private const string AA_LogName_Name = "AA_LogName";            // Log
+        private const string AA_LogTag_Name = "AA_LogTag";            // Log
+        private const string AA_LogGroup_Name = "AA_LogGroup";            // Log
+        private const string AA_LogLines_Name = "AA_LogLines";  // Number of lines in Log
         private const string AA_Group_Name = "AA_Group";        // Group name
         private const string AA_ByAngle_Name = "AA_ByAngle";    // Rotate arg. Rotate by angle
         private const string AA_ToAngle_Name = "AA_ToAngle";    // Rotate arg. Rotate to angle
 
         // Commands
-        public static ArgumentType AA_Name { get { return AA_Name_Name; } }              // Name
+        public static ArgumentType AA_Name { get { return AA_Name_Name; } }         // Name
         public static ArgumentType AA_Tag { get { return AA_Tag_Name; } }           // Tag
-        public static ArgumentType AA_Log { get { return AA_Log_Name; } }      // Log lines
+        public static ArgumentType AA_LogName { get { return AA_LogName_Name; } }   // Log lines
+        public static ArgumentType AA_LogTag { get { return AA_LogTag_Name; } }   // Log lines
         public static ArgumentType AA_Group { get { return AA_Group_Name; } }       // Group name
         public static ArgumentType AA_ByAngle { get { return AA_ByAngle_Name; } }   // Rotate arg. Rotate by angle
         public static ArgumentType AA_ToAngle { get { return AA_ToAngle_Name; } }   // Rotate arg. Rotate to angle
@@ -30,7 +34,7 @@ namespace SE_Mods.CommandRunner
             arguments = new List<ArgumentType>();
             arguments.Add(new ArgumentType(AA_Name_Name));
             arguments.Add(new ArgumentType(AA_Tag_Name));
-            arguments.Add(new ArgumentType(AA_Log_Name));
+            arguments.Add(new ArgumentType(AA_LogName_Name));
             arguments.Add(new ArgumentType(AA_Group_Name));
             arguments.Add(new ArgumentType(AA_ByAngle_Name));
             arguments.Add(new ArgumentType(AA_ToAngle_Name));
