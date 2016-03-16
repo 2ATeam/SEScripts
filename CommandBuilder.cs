@@ -1,14 +1,11 @@
-﻿using System;
+﻿using Sandbox.ModAPI.Ingame;
+using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 
 namespace SE_Mods.CommandRunner
 {
     static class CommandBuilder
-    {
+    {                                                                                    // G1      G2
         private static string CMD_TEMPLATE = "(.*)\\s*\\[\\s*(?:([^;]+)\\s*;?\\s*)*\\]"; // CMD [ARG1; ARG2]
 
         /// <summary>
@@ -17,24 +14,21 @@ namespace SE_Mods.CommandRunner
         /// <exception cref="ArgumentException">Throws ArgumentException if any parsing error occurs. </exception>
         /// <param name="strCmd"> Incoming string argument.</param>
         /// <returns> Returns command object which can be run. </returns>
-        public static Command BuildCommand(string strCmd)
+        public static Command BuildCommand(MyGridProgram environment, string strCmd)
         {
-            Match match = new Regex(CMD_TEMPLATE).Match(strCmd);
+            System.Text.RegularExpressions.Match match = new System.Text.RegularExpressions.Regex(CMD_TEMPLATE).Match(strCmd);
             if (match.Success)
             {
                 Command cmd;
-                string name = match.Groups[1].Value;
-                CommandType type;
-                if (!Enum.TryParse(name, out type))
-                    throw new ArgumentException("Unknown command: " + name);
+                string name = match.Groups[1].Value.Trim();
+                CommandType type = name;
+                if (type == null) environment.Echo(string.Format("Unknown command: {0}", name));
 
                 List<Argument> arguments = new List<Argument>();
-                Group args = match.Groups[2];
+                System.Text.RegularExpressions.Group args = match.Groups[2];
                 for (int i = 0; i < args.Captures.Count; ++i)
-                {
-                    arguments.Add(new Argument(args.Captures[i].Value));
-                }
-                return GetCommand(type, arguments.ToArray());
+                    arguments.Add(ArgumentBuilder.BuildArgument(args.Captures[i].Value));
+                return GetCommand(environment, type, arguments.ToArray());
 
             }
             else
@@ -43,13 +37,11 @@ namespace SE_Mods.CommandRunner
             }
         }
 
-        private static Command GetCommand(CommandType type, params Argument[] args)
+        private static Command GetCommand(MyGridProgram environment, CommandType type, params Argument[] args)
         {
-            switch (type)
-            {
-                case CommandType.AA_Rotate: return new RotateCommand(args);
-                default: return null;
-            }
+            if (type == CommandType.AA_Rotate) return new RotateCommand(environment, args);
+
+            return null;
         }
     }
 }

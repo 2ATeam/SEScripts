@@ -1,13 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
+using Sandbox.ModAPI.Ingame;
 
 namespace SE_Mods.CommandRunner
 {
-
     //class ArgumentDictionary
     //{
     //    List<ArgumentType> types;
@@ -60,14 +56,24 @@ namespace SE_Mods.CommandRunner
         /// </summary>
         public CommandType Type { get; protected set; }
 
+        public MyGridProgram Environment { get; private set; }
+
+        public bool IsValid { get; protected set; }
+
         /// <summary>
         /// Collection of defined arguments.
         /// </summary>
         public ICollection<Argument> Arguments { get { return arguments.Values; } }
 
-        protected Command(CommandType type, params Argument[] args)
+        protected Command(MyGridProgram environment, CommandType type, params Argument[] args)
         {
             Type = type;
+            Environment = environment;
+            if (Environment == null)
+            {
+                Log(string.Format("Command \"{0}\" received null environment!", type));
+                IsValid = false;
+            }
             arguments = new Dictionary<ArgumentType, Argument>();
             for (int i = 0; i < args.Length; ++i)
             {
@@ -75,6 +81,7 @@ namespace SE_Mods.CommandRunner
                 if (IsAcceptableArgument(arg.Type))
                     arguments.Add(arg.Type, arg);
             }
+            IsValid = true;
             Validate();
         }
 
@@ -84,7 +91,11 @@ namespace SE_Mods.CommandRunner
         protected virtual void Validate()
         {
             PrimaryArgumentKey = GetPrimaryArgument(ArgumentType.AA_Group, ArgumentType.AA_Name, ArgumentType.AA_Tag);
-            if (PrimaryArgumentKey == null) throw new ArgumentException("Missed search key argument (name/tag/group)");
+            if (PrimaryArgumentKey == null)
+            {
+                Log(string.Format("Missed search key argument (at least one of {0}/{1}/{2} must be set)", ArgumentType.AA_Group, ArgumentType.AA_Name, ArgumentType.AA_Tag));
+                IsValid = false;
+            }
         }
 
 
@@ -110,7 +121,7 @@ namespace SE_Mods.CommandRunner
         /// Implements actually command's logic.
         /// </summary>
         /// <param name="environment"> Script environment.</param>
-        public abstract void Run(Sandbox.ModAPI.Ingame.MyGridProgram environment);
+        public abstract void Run(MyGridProgram environment);
 
         /// <summary>
         /// Checks whether this argument is acceptable by current command.
@@ -119,16 +130,32 @@ namespace SE_Mods.CommandRunner
         /// <returns>Returns flag indicating whether this argument type acceptable or not.</returns>
         protected virtual bool IsAcceptableArgument(ArgumentType arg)
         {
-            switch (arg)
-            {
-                case ArgumentType.AA_Group:
-                case ArgumentType.AA_Name:
-                case ArgumentType.AA_Tag:
-                    return true;
-                default: return false;
-            }
+            return (arg == ArgumentType.AA_Group || arg == ArgumentType.AA_Name || arg == ArgumentType.AA_Tag || arg == ArgumentType.AA_Log);
         }
 
+       
+        /// <summary>
+        /// Logs message to specified panel if set. In case critical message was received - throws excpetion of type T containing that message.
+        /// </summary>
+        /// <typeparam name="T">Type of exception to be thrown. </typeparam>
+        /// <param name="message">Message.</param>
+        /// <param name="isCritical">Flag indicating whether this message is critical to command execution. </param>
+        protected void Log(string message)
+        {
+            string logPanel = arguments.GetValueOrDefault(ArgumentType.AA_Log).Value;
+            IMyTextPanel panel = Environment.GridTerminalSystem.GetBlockWithName(logPanel) as IMyTextPanel;
+            if (panel != null)
+            {
+                panel.SetShowOnScreen(Sandbox.Common.ObjectBuilders.ShowTextOnScreenFlag.PRIVATE);
+                List<string> lines = new List<string>(panel.GetPrivateText().Split('\n'));
+
+                Environment.Echo(string.Format("Log has {0} lines.", lines.Count));
+                lines.Add(string.Format("[{0}] : {1}.", DateTime.Now.ToString(), message));
+                while (lines.Count > 22) lines.RemoveAt(0);
+                panel.WritePrivateText(string.Join("\n", lines));
+            }
+            Environment.Echo(message);
+        }
         public override string ToString()
         {
             List<Argument> args = new List<Argument>(Arguments);
