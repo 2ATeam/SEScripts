@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Sandbox.ModAPI.Ingame;
+using Sandbox.Common.ObjectBuilders;
 
 namespace SE_Mods.CommandRunner
 {
@@ -52,6 +53,11 @@ namespace SE_Mods.CommandRunner
         protected Argument PrimaryArgumentKey { get; set; }
 
         /// <summary>
+        /// Argument which is used to identify log output panels.
+        /// </summary>
+        private Argument PrimaryArgumentLog { get; set; }
+
+        /// <summary>
         /// Type of the command.
         /// </summary>
         public CommandType Type { get; protected set; }
@@ -82,6 +88,8 @@ namespace SE_Mods.CommandRunner
                     arguments.Add(arg.Type, arg);
             }
             IsValid = true;
+            PrimaryArgumentKey = GetPrimaryArgument(ArgumentType.AA_Group, ArgumentType.AA_Name, ArgumentType.AA_Tag);
+            PrimaryArgumentLog = GetPrimaryArgument(ArgumentType.AA_LogGroup, ArgumentType.AA_LogName, ArgumentType.AA_LogTag);
             Validate();
         }
 
@@ -90,7 +98,6 @@ namespace SE_Mods.CommandRunner
         /// </summary>
         protected virtual void Validate()
         {
-            PrimaryArgumentKey = GetPrimaryArgument(ArgumentType.AA_Group, ArgumentType.AA_Name, ArgumentType.AA_Tag);
             if (PrimaryArgumentKey == null)
             {
                 Log(string.Format("Missed search key argument (at least one of {0}/{1}/{2} must be set)", ArgumentType.AA_Group, ArgumentType.AA_Name, ArgumentType.AA_Tag));
@@ -130,30 +137,85 @@ namespace SE_Mods.CommandRunner
         /// <returns>Returns flag indicating whether this argument type acceptable or not.</returns>
         protected virtual bool IsAcceptableArgument(ArgumentType arg)
         {
-            return (arg == ArgumentType.AA_Group || arg == ArgumentType.AA_Name || arg == ArgumentType.AA_Tag || arg == ArgumentType.AA_LogName);
+            return (arg == ArgumentType.AA_Group || arg == ArgumentType.AA_Name || arg == ArgumentType.AA_Tag || arg == ArgumentType.AA_LogGroup || arg == ArgumentType.AA_LogName || arg == ArgumentType.AA_LogTag);
         }
 
-       
+       /// <summary>
+       /// Logs message to panel
+       /// </summary>
+       /// <param name="panel"></param>
+       /// <param name="message"></param>
+        private void LogToPanel(IMyTextPanel panel, string message)
+        {
+            if (panel != null)
+            {
+                bool toPublic = Utils.HasTag(panel, Tag.AA_LogPublic);
+                panel.SetShowOnScreen(toPublic ? ShowTextOnScreenFlag.PUBLIC : ShowTextOnScreenFlag.PRIVATE);
+                List<string> lines = new List<string>(GetLines(panel));
+                Argument logLinesArg = arguments[ArgumentType.AA_LogLines];
+                int logLines = 22;
+                if (logLinesArg != null) int.TryParse(logLinesArg.Value, out logLines);
+                lines.Add(string.Format("[{0}] : {1}.", DateTime.Now.ToString(), message));
+                while (lines.Count > logLines) lines.RemoveAt(0);
+
+                if (toPublic) panel.WritePublicText(string.Join("\n", lines));
+                else panel.WritePrivateText(string.Join("\n", lines));
+            }
+            
+        }
+
+        private void ChainLog(string message, List<IMyTextPanel> panels)
+        {
+            foreach (var panel in panels)
+                LogToPanel(panel, message);
+        }
+
+        private string[] GetLines(IMyTextPanel panel) { return panel.GetPrivateText().Split('\n'); }
+
+
         /// <summary>
         /// Logs message to specified panel if set and echoes it to programmable block output.
         /// </summary>
         /// <param name="message">Message.</param>
         protected void Log(string message)
         {
-            string logPanel = arguments.GetValueOrDefault(ArgumentType.AA_LogName).Value;
-            IMyTextPanel panel = Environment.GridTerminalSystem.GetBlockWithName(logPanel) as IMyTextPanel;
-            if (panel != null)
-            {
-                panel.SetShowOnScreen(Sandbox.Common.ObjectBuilders.ShowTextOnScreenFlag.PRIVATE);
-                List<string> lines = new List<string>(panel.GetPrivateText().Split('\n'));
-
-                Environment.Echo(string.Format("Log has {0} lines.", lines.Count));
-                lines.Add(string.Format("[{0}] : {1}.", DateTime.Now.ToString(), message));
-                while (lines.Count > 22) lines.RemoveAt(0);
-                panel.WritePrivateText(string.Join("\n", lines));
-            }
             Environment.Echo(message);
+            if (PrimaryArgumentLog == null) { Environment.Echo("Log output wasn't set."); return; }
+
+            if (PrimaryArgumentLog.Type == ArgumentType.AA_LogGroup)
+            {
+                IMyBlockGroup group = Environment.GridTerminalSystem.GetBlockGroupWithName(PrimaryArgumentLog.Value);
+                if (group != null) ChainLog(message, Utils.GetBlocksOfType<IMyTextPanel>(group.Blocks));
+                else Environment.Echo(string.Format("Specified text panels (LCDs) group not found: {0}", PrimaryArgumentLog.Value));
+            }
+            else if (PrimaryArgumentLog.Type == ArgumentType.AA_LogName)
+            {
+                IMyTextPanel panel = Environment.GridTerminalSystem.GetBlockWithName(PrimaryArgumentLog.Value) as IMyTextPanel;
+                if (panel != null) LogToPanel(panel, message);
+                else Log(string.Format("Specified text panel (LCD) not found: {0}", PrimaryArgumentLog.Value));
+            }
+            else if (PrimaryArgumentLog.Type == ArgumentType.AA_LogTag)
+            {
+                List<IMyTextPanel> panels = GetTextPanelsWithTag(PrimaryArgumentLog.Value);
+                if (panels.Count != 0) ChainLog(message, panels);
+                else Environment.Echo(string.Format("No text panels (LCDs) with tag \"{0}\" were found", PrimaryArgumentLog.Value));
+            }
         }
+
+        /// FIXME: Hope this method is temp workaround while there is ModAPI bug with generics...
+        private List<IMyTextPanel> GetTextPanelsWithTag(string tag)
+        {
+            List<IMyTerminalBlock> blocks = new List<IMyTerminalBlock>();
+            List<IMyTextPanel> result = new List<IMyTextPanel>();
+            Environment.GridTerminalSystem.GetBlocksOfType<IMyTextPanel>(blocks);
+            for (int i = 0; i < blocks.Count; i++)
+            {
+                IMyTextPanel block = blocks[i] as IMyTextPanel;
+                if (Utils.HasTag(block, tag)) result.Add(block);
+            }
+            return result;
+        }
+
         public override string ToString()
         {
             List<Argument> args = new List<Argument>(Arguments);

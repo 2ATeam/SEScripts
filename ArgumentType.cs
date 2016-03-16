@@ -6,11 +6,11 @@ namespace SE_Mods.CommandRunner
     /// Defines commands' arguments.
     /// Note: This is a replacement for enums, since enum is not supported in Space Engineers Scripting.
     /// </summary>
-    class ArgumentType
+    sealed class ArgumentType
     {
         // Names of arguments
         private const string AA_Name_Name = "AA_Name";          /// Name of target block.
-        private const string AA_Tag_Name = "AA_Tag";            /// Tag of target blocks. Tag has following format: "[%TAG%]" (without quotes)
+        private const string AA_Tag_Name = "AA_Tag";            /// Tag of target blocks. Note: Tag blocks using the following format: "[%TAG%]" (without quotes)
         private const string AA_Group_Name = "AA_Group";        /// Group name of target blocks.
         private const string AA_LogName_Name = "AA_LogName";    /// Name of TextPanel/LCD used as log output.
         private const string AA_LogTag_Name = "AA_LogTag";      /// Tag of TextPanels/LCDs used as log output.
