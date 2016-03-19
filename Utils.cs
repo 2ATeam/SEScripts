@@ -20,12 +20,12 @@ namespace SE_Mods.CommandRunner
         /// <typeparam name="T">Type of dest blocks.</typeparam>
         /// <param name="blocks">List of all available blocks.</param>
         /// <returns>Returns list of blocks of specified type.</returns>
-        public static List<T> GetBlocksOfType<T>(List<IMyTerminalBlock> blocks)
+        public static List<IMyTerminalBlock> GetBlocksOfType<T>(List<IMyTerminalBlock> blocks)
         {
-            List<T> res = new List<T>();
-            foreach (T block in blocks)
-                if (block != null) res.Add(block);
-            return res;
+            List<IMyTerminalBlock> result = new List<IMyTerminalBlock>();
+            foreach (var block in blocks)
+                if ((T)block != null) result.Add(block);
+            return result;       
         }
 
         // Really hope they will fix generics crash...
@@ -36,22 +36,18 @@ namespace SE_Mods.CommandRunner
         /// <param name="tag">Filtering tag.</param>
         /// <param name="environment">Environment to look up blocks. </param>
         /// <returns>Returns either list of found blocks or empty list. </returns>
-        //public static List<T> GetBlocksWithTag<T>(string tag, MyGridProgram environment) where T : IMyTerminalBlock
-        //{
-        //    environment.Echo("Line 1");
-        //    List<IMyTerminalBlock> blocks = new List<IMyTerminalBlock>();
-        //    List<T> result = new List<T>();
-        //    environment.Echo("Created lists");
-        //    environment.GridTerminalSystem.GetBlocksOfType<T>(blocks);
-        //    environment.Echo("Retrieved blocks");
-        //    for (int i = 0; i < blocks.Count; i++)
-        //    {
-        //        T block = (T)blocks[i];
-        //        if (block != null && block.CustomName.Contains(string.Format("[{0}]", tag.Trim())))
-        //            result.Add(block);
-        //    }
-        //    return result;
-        //}
+        public static List<IMyTerminalBlock> GetBlocksWithTag<T>(string tag, MyGridProgram environment)
+        {
+            List<IMyTerminalBlock> blocks = new List<IMyTerminalBlock>();
+            environment.GridTerminalSystem.GetBlocksOfType<T>(blocks);
+            environment.Echo(string.Format("Found {0} blocks of type {1}", blocks.Count, typeof(T).Name));
+            for (int i = blocks.Count - 1; i >= 0; i--)
+                if (!HasTag(blocks[i], tag)) blocks.Remove(blocks[i]);
+            return blocks;
+        }
 
+
+        public static string[] GetLines(IMyTextPanel panel, bool fromPrivate) { return (fromPrivate ? panel.GetPrivateText() : panel.GetPublicText()).Split('\n'); }
     }
+}
 }

@@ -9,16 +9,19 @@ namespace SE_Mods.CommandRunner
     sealed class CommandType
     {
         // Names of commands
-        private const string AA_Rotate_Name = "AA_Rotate";  /// Rotation command designed to rotate target rotors to or by specified angle.
+        private const string AA_Rotate_Name = "AA_Rotate";    /// Rotation command designed to rotate target rotors to or by specified angle.
+        private const string AA_Console_Name = "AA_Console";  /// Console command which will read commands line by line from specified console LCD.
 
         // Commands
-        public static CommandType AA_Rotate { get { return AA_Rotate_Name; } }  // Rotate. Applied to rotors.
+        public static CommandType AA_Rotate { get { return AA_Rotate_Name; } }
+        public static CommandType AA_Console { get { return AA_Console_Name; } }
 
         private static List<CommandType> commands;
         static CommandType()
         {
             commands = new List<CommandType>();
-            commands.Add(new CommandType(0, AA_Rotate_Name));
+            commands.Add(new CommandType(AA_Rotate_Name));
+            commands.Add(new CommandType(AA_Console_Name));
         }
         public int Value { get; private set; }
         public string Name { get; private set; }

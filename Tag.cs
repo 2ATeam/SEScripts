@@ -25,9 +25,10 @@ namespace SE_Mods.CommandRunner
         private Tag(string name) : this(tags.Count, name) { }
         private Tag(int value, string name) { Value = value; Name = name; }
 
-        public static implicit operator int(Tag type) { return type.Value; }
+        public static implicit operator int(Tag tag) { return tag.Value; }
         public static implicit operator Tag(int value) { return tags.Find(e => e.Value == value); }
         public static implicit operator string(Tag type) { return type.Name; }
         public static implicit operator Tag(string name) { return tags.Find(e => e.Name == name); ; }
+        public override string ToString() { return Name; }
     }
 }

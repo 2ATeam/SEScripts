@@ -1,45 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using Sandbox.ModAPI.Ingame;
-using Sandbox.Common.ObjectBuilders;
+using SpaceEngineers.Game.ModAPI.Ingame;
 
-namespace SE_Mods.CommandRunner
+namespace SE_Mods.CommandRunner.Commands
 {
-    //class ArgumentDictionary
-    //{
-    //    List<ArgumentType> types;
-    //    List<Argument> args;
-        
-    //    public List<Argument> Values { get { return args; } }
-
-    //    public void Add(ArgumentType type, Argument arg)
-    //    {
-    //        int index = -1;
-    //        if ((index = types.IndexOf(type)) > -1)
-    //        {
-    //            types.RemoveAt(index);
-    //            args.RemoveAt(index);
-    //        }
-    //        types.Add(type);
-    //        args.Add(arg);
-    //    }
-
-    //    public bool Contains(ArgumentType type)
-    //    {
-    //        return types.Contains(type);
-    //    }
-
-    //    public Argument GetValueOrDefault(ArgumentType type)
-    //    {
-    //        int index = -1;
-    //        if ((index = types.IndexOf(type)) > -1)
-    //        {
-    //            return args[index];
-    //        }
-    //        return null;
-    //    }
-    //}
-
     abstract class Command
     {
         /// <summary>
@@ -88,8 +53,6 @@ namespace SE_Mods.CommandRunner
                     arguments.Add(arg.Type, arg);
             }
             IsValid = true;
-            PrimaryArgumentKey = GetPrimaryArgument(ArgumentType.AA_Group, ArgumentType.AA_Name, ArgumentType.AA_Tag);
-            PrimaryArgumentLog = GetPrimaryArgument(ArgumentType.AA_LogGroup, ArgumentType.AA_LogName, ArgumentType.AA_LogTag);
             Validate();
         }
 
@@ -98,6 +61,8 @@ namespace SE_Mods.CommandRunner
         /// </summary>
         protected virtual void Validate()
         {
+            PrimaryArgumentKey = GetPrimaryArgument(ArgumentType.AA_Group, ArgumentType.AA_Name, ArgumentType.AA_Tag);
+            PrimaryArgumentLog = GetPrimaryArgument(ArgumentType.AA_LogGroup, ArgumentType.AA_LogName, ArgumentType.AA_LogTag);
             if (PrimaryArgumentKey == null)
             {
                 Log(string.Format("Missed search key argument (at least one of {0}/{1}/{2} must be set)", ArgumentType.AA_Group, ArgumentType.AA_Name, ArgumentType.AA_Tag));
@@ -137,7 +102,7 @@ namespace SE_Mods.CommandRunner
         /// <returns>Returns flag indicating whether this argument type acceptable or not.</returns>
         protected virtual bool IsAcceptableArgument(ArgumentType arg)
         {
-            return (arg == ArgumentType.AA_Group || arg == ArgumentType.AA_Name || arg == ArgumentType.AA_Tag || arg == ArgumentType.AA_LogGroup || arg == ArgumentType.AA_LogName || arg == ArgumentType.AA_LogTag);
+            return (arg == ArgumentType.AA_Group || arg == ArgumentType.AA_Name || arg == ArgumentType.AA_Tag || arg == ArgumentType.AA_LogGroup || arg == ArgumentType.AA_LogName || arg == ArgumentType.AA_LogTag || arg == ArgumentType.AA_LogLines);
         }
 
        /// <summary>
@@ -149,16 +114,23 @@ namespace SE_Mods.CommandRunner
         {
             if (panel != null)
             {
-                bool toPublic = Utils.HasTag(panel, Tag.AA_LogPublic);
-                panel.SetShowOnScreen(toPublic ? ShowTextOnScreenFlag.PUBLIC : ShowTextOnScreenFlag.PRIVATE);
-                List<string> lines = new List<string>(GetLines(panel));
-                Argument logLinesArg = arguments[ArgumentType.AA_LogLines];
-                int logLines = 22;
-                if (logLinesArg != null) int.TryParse(logLinesArg.Value, out logLines);
-                lines.Add(string.Format("[{0}] : {1}.", DateTime.Now.ToString(), message));
+                bool isPublic = Utils.HasTag(panel, Tag.AA_LogPublic);
+                const int LOG_LINES = 22;
+                panel.SetShowOnScreen(isPublic ? VRage.Game.GUI.TextPanel.ShowTextOnScreenFlag.PUBLIC : VRage.Game.GUI.TextPanel.ShowTextOnScreenFlag.PRIVATE);
+                List<string> lines = new List<string>(Utils.GetLines(panel, !isPublic));
+                Argument logLinesArg = arguments.GetValueOrDefault(ArgumentType.AA_LogLines);
+                int logLines = LOG_LINES;
+                if (logLinesArg != null)
+                {
+                    int.TryParse(logLinesArg.Value, out logLines);
+                    Environment.Echo(string.Format("Found Log param : {1} = {0}.", logLinesArg.Value, logLinesArg.Type));
+                }
+                if (logLines <= 0) logLines = LOG_LINES;
+                Environment.Echo(string.Format("LOG LINES : {0}.", logLines));
+                lines.Add(string.Format("[{0}] : {1}", DateTime.Now.ToLongTimeString(), message));
                 while (lines.Count > logLines) lines.RemoveAt(0);
 
-                if (toPublic) panel.WritePublicText(string.Join("\n", lines));
+                if (isPublic) panel.WritePublicText(string.Join("\n", lines));
                 else panel.WritePrivateText(string.Join("\n", lines));
             }
             
@@ -169,9 +141,6 @@ namespace SE_Mods.CommandRunner
             foreach (var panel in panels)
                 LogToPanel(panel, message);
         }
-
-        private string[] GetLines(IMyTextPanel panel) { return panel.GetPrivateText().Split('\n'); }
-
 
         /// <summary>
         /// Logs message to specified panel if set and echoes it to programmable block output.
@@ -184,21 +153,21 @@ namespace SE_Mods.CommandRunner
 
             if (PrimaryArgumentLog.Type == ArgumentType.AA_LogGroup)
             {
-                IMyBlockGroup group = Environment.GridTerminalSystem.GetBlockGroupWithName(PrimaryArgumentLog.Value);
-                if (group != null) ChainLog(message, Utils.GetBlocksOfType<IMyTextPanel>(group.Blocks));
-                else Environment.Echo(string.Format("Specified text panels (LCDs) group not found: {0}", PrimaryArgumentLog.Value));
+                //IMyBlockGroup group = Environment.GridTerminalSystem.GetBlockGroupWithName(PrimaryArgumentLog.Value);
+                //if (group != null) ChainLog(message, Utils.GetBlocksOfType<IMyTextPanel>(group.Blocks));
+                //else Environment.Echo(string.Format("Specified text panels (LCDs) group not found: {0}", PrimaryArgumentLog.Value));
             }
             else if (PrimaryArgumentLog.Type == ArgumentType.AA_LogName)
             {
                 IMyTextPanel panel = Environment.GridTerminalSystem.GetBlockWithName(PrimaryArgumentLog.Value) as IMyTextPanel;
                 if (panel != null) LogToPanel(panel, message);
-                else Log(string.Format("Specified text panel (LCD) not found: {0}", PrimaryArgumentLog.Value));
+                else Environment.Echo(string.Format("Specified text panel (LCD) not found: {0}.", PrimaryArgumentLog.Value));
             }
             else if (PrimaryArgumentLog.Type == ArgumentType.AA_LogTag)
             {
                 List<IMyTextPanel> panels = GetTextPanelsWithTag(PrimaryArgumentLog.Value);
                 if (panels.Count != 0) ChainLog(message, panels);
-                else Environment.Echo(string.Format("No text panels (LCDs) with tag \"{0}\" were found", PrimaryArgumentLog.Value));
+                else Environment.Echo(string.Format("No text panels (LCDs) with tag \"{0}\" were found.", PrimaryArgumentLog.Value));
             }
         }
 
