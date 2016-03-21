@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using Sandbox.ModAPI.Ingame;
-using SpaceEngineers.Game.ModAPI.Ingame;
 
 namespace SE_Mods.CommandRunner.Commands
 {
@@ -28,6 +27,8 @@ namespace SE_Mods.CommandRunner.Commands
         public CommandType Type { get; protected set; }
 
         public MyGridProgram Environment { get; protected set; }
+
+        public string Comment { get; set; }
 
         public bool IsValid { get; protected set; }
 
@@ -106,7 +107,7 @@ namespace SE_Mods.CommandRunner.Commands
         }
 
        /// <summary>
-       /// Logs message to panel
+       /// Logs message to panel.
        /// </summary>
        /// <param name="panel"></param>
        /// <param name="message"></param>
@@ -117,8 +118,8 @@ namespace SE_Mods.CommandRunner.Commands
                 bool isPublic = Utils.HasTag(panel, Tag.AA_LogPublic);
                 const int LOG_LINES = 22;
                 panel.SetShowOnScreen(isPublic ? VRage.Game.GUI.TextPanel.ShowTextOnScreenFlag.PUBLIC : VRage.Game.GUI.TextPanel.ShowTextOnScreenFlag.PRIVATE);
-                List<string> lines = new List<string>(Utils.GetLines(panel, !isPublic));
-                Argument logLinesArg = arguments.GetValueOrDefault(ArgumentType.AA_LogLines);
+                List<string> lines = new List<string>(Utils.GetLines(panel, isPublic));
+                Argument logLinesArg = GetPrimaryArgument(ArgumentType.AA_LogLines);
                 int logLines = LOG_LINES;
                 if (logLinesArg != null)
                 {
@@ -129,9 +130,9 @@ namespace SE_Mods.CommandRunner.Commands
                 Environment.Echo(string.Format("LOG LINES : {0}.", logLines));
                 lines.Add(string.Format("[{0}] : {1}", DateTime.Now.ToLongTimeString(), message));
                 while (lines.Count > logLines) lines.RemoveAt(0);
-
-                if (isPublic) panel.WritePublicText(string.Join("\n", lines));
-                else panel.WritePrivateText(string.Join("\n", lines));
+                string text = string.Join("\n", lines);
+                if (isPublic) panel.WritePublicText(text);
+                else panel.WritePrivateText(text);
             }
             
         }
@@ -165,24 +166,10 @@ namespace SE_Mods.CommandRunner.Commands
             }
             else if (PrimaryArgumentLog.Type == ArgumentType.AA_LogTag)
             {
-                List<IMyTextPanel> panels = GetTextPanelsWithTag(PrimaryArgumentLog.Value);
-                if (panels.Count != 0) ChainLog(message, panels);
+                List<IMyTerminalBlock> panels = Utils.GetBlocksWithTag<IMyTextPanel>(PrimaryArgumentLog.Value, Environment);
+                if (panels.Count != 0) ChainLog(message, panels.ConvertAll(block => block as IMyTextPanel));
                 else Environment.Echo(string.Format("No text panels (LCDs) with tag \"{0}\" were found.", PrimaryArgumentLog.Value));
             }
-        }
-
-        /// FIXME: Hope this method is temp workaround while there is ModAPI bug with generics...
-        private List<IMyTextPanel> GetTextPanelsWithTag(string tag)
-        {
-            List<IMyTerminalBlock> blocks = new List<IMyTerminalBlock>();
-            List<IMyTextPanel> result = new List<IMyTextPanel>();
-            Environment.GridTerminalSystem.GetBlocksOfType<IMyTextPanel>(blocks);
-            for (int i = 0; i < blocks.Count; i++)
-            {
-                IMyTextPanel block = blocks[i] as IMyTextPanel;
-                if (Utils.HasTag(block, tag)) result.Add(block);
-            }
-            return result;
         }
 
         public override string ToString()

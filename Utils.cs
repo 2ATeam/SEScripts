@@ -47,7 +47,6 @@ namespace SE_Mods.CommandRunner
         }
 
 
-        public static string[] GetLines(IMyTextPanel panel, bool fromPrivate) { return (fromPrivate ? panel.GetPrivateText() : panel.GetPublicText()).Split('\n'); }
+        public static string[] GetLines(IMyTextPanel panel, bool fromPublic) { return (fromPublic ? panel.GetPublicText() : panel.GetPrivateText()).Split('\n'); }
     }
-}
 }

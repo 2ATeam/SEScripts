@@ -1,5 +1,4 @@
-﻿using System;
-using Sandbox.ModAPI.Ingame;
+﻿using Sandbox.ModAPI.Ingame;
 
 namespace SE_Mods.CommandRunner.Commands
 {
@@ -9,7 +8,7 @@ namespace SE_Mods.CommandRunner.Commands
 
         protected override bool IsAcceptableArgument(ArgumentType arg)
         {
-            return arg == ArgumentType.AA_Console || base.IsAcceptableArgument(arg);
+            return arg == ArgumentType.AA_SingleMode || base.IsAcceptableArgument(arg);
         }
 
         protected override void Validate()
@@ -24,13 +23,16 @@ namespace SE_Mods.CommandRunner.Commands
             if (!IsValid) { Log(string.Format("Command {0} is invalid.", Type)); return; }
             IMyTextPanel panel = Environment.GridTerminalSystem.GetBlockWithName(PrimaryArgumentKey.Value) as IMyTextPanel;
 
-            if (panel == null) { Log(string.Format("Specified TextPanel/LCD was not found ({0})", PrimaryArgumentKey.Value)); return; }
+            if (panel == null) { Log(string.Format("Specified text panel (LCD) was not found ({0}).", PrimaryArgumentKey.Value)); return; }
+            string[] lines = Utils.GetLines(panel, Utils.HasTag(panel, Tag.AA_LogPublic));
 
-            bool isPublic = Utils.HasTag(panel, Tag.AA_LogPublic);
-            string[] lines = Utils.GetLines(panel, !isPublic);
-
-            foreach (var line in lines)
-                CommandBuilder.BuildCommand(Environment, line.Trim()).Run();
+            ///TODO: Implement single line mode.
+            for (int i = 0; i < lines.Length; i++)
+            { 
+                var c = CommandBuilder.BuildCommand(Environment, lines[i].Trim());
+                if (c != null) c.Run();
+                else environment.Echo(string.Format("Not a command string at line {0}.", i + 1));
+            }
         }
     }
 }

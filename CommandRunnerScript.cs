@@ -12,7 +12,9 @@ namespace SE_Mods.CommandRunner
         /// </summary>
         public void Main(string args)
         {
-            CommandBuilder.BuildCommand(this, args).Run();
+            var c = CommandBuilder.BuildCommand(this, args);
+            if (c != null) c.Run();
+            else Echo("Invalid command string.");
         }
     }
 }

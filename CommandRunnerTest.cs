@@ -10,7 +10,8 @@ namespace SE_Mods.CommandRunner
     {
         public static void Main(string[] args)
         {
-            new CommandRunnerScript().Main("AA_Rotate [AA_Name : SM 1 Rotation; AA_ByAngle : 10; AA_Log: LOG]");
+            new CommandRunnerScript().Main("AA_Solar [AA_Memory : LOG]");
+            // new CommandRunnerScript().Main("AA_Rotate [AA_Name : SM 1 Rotation; AA_ByAngle : 10; AA_Log: LOG]");
         }
     }
 }

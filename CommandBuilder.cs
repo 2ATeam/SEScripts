@@ -1,12 +1,12 @@
 ﻿using Sandbox.ModAPI.Ingame;
-using System;
 using System.Collections.Generic;
+using SE_Mods.CommandRunner.Commands;
 
 namespace SE_Mods.CommandRunner
 {
     static class CommandBuilder
-    {                                                                                    // G1      G2
-        private static string CMD_TEMPLATE = "(.*)\\s*\\[\\s*(?:([^;]+)\\s*;?\\s*)*\\]"; // CMD [ARG1; ARG2]
+    {                                       // G1                G2                             G3
+        private static string CMD_TEMPLATE = "(.*)\\s*\\[\\s*(?:([^;]+)\\s*;?\\s*)*\\]\\s*(?://(.*))?"; // CMD [ARG1; ARG2] // comment
 
         /// <summary>
         /// Builds command from given string. If any error occurs.
@@ -18,7 +18,7 @@ namespace SE_Mods.CommandRunner
             System.Text.RegularExpressions.Match match = new System.Text.RegularExpressions.Regex(CMD_TEMPLATE).Match(strCmd);
             if (match.Success)
             {
-                Command cmd;
+                
                 string name = match.Groups[1].Value.Trim();
                 CommandType type = name;
                 if (type == null) { environment.Echo(string.Format("Unknown command: {0}", name)); return null; }
@@ -31,19 +31,20 @@ namespace SE_Mods.CommandRunner
                     if (arg == null) continue;
                     arguments.Add(arg);
                 }
-                    
-                return GetCommand(environment, type, arguments.ToArray());
+
+                Command cmd = GetCommand(environment, type, arguments.ToArray());
+                if (match.Groups[3].Captures.Count > 0) cmd.Comment = match.Groups[3].Value.Trim();
+                return cmd;
             }
             else
-            {
-                environment.Echo("Invalid command string");
                 return null;
-            }
         }
 
         private static Command GetCommand(MyGridProgram environment, CommandType type, params Argument[] args)
         {
             if (type == CommandType.AA_Rotate) return new RotateCommand(environment, args);
+            if (type == CommandType.AA_Console) return new ConsoleCommand(environment, args);
+            if (type == CommandType.AA_SolarOptimize) return new SolarOptimizeCommand(environment, args);
             return null;
         }
     }

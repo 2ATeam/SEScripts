@@ -9,12 +9,14 @@ namespace SE_Mods.CommandRunner
     sealed class CommandType
     {
         // Names of commands
-        private const string AA_Rotate_Name = "AA_Rotate";    /// Rotation command designed to rotate target rotors to or by specified angle.
-        private const string AA_Console_Name = "AA_Console";  /// Console command which will read commands line by line from specified console LCD.
+        private const string AA_Rotate_Name = "AA_Rotate";          /// Rotation command designed to rotate target rotors to or by specified angle.
+        private const string AA_Console_Name = "AA_Console";        /// Console command which will read commands line by line from specified console LCD.
+        private const string AA_SolarOptimize_Name = "AA_Solar";    /// Solar optimization command desinged to maximize solar input power by manipulating supporting rotors.
 
         // Commands
         public static CommandType AA_Rotate { get { return AA_Rotate_Name; } }
         public static CommandType AA_Console { get { return AA_Console_Name; } }
+        public static CommandType AA_SolarOptimize {get { return AA_SolarOptimize_Name; }}
 
         private static List<CommandType> commands;
         static CommandType()
@@ -22,6 +24,7 @@ namespace SE_Mods.CommandRunner
             commands = new List<CommandType>();
             commands.Add(new CommandType(AA_Rotate_Name));
             commands.Add(new CommandType(AA_Console_Name));
+            commands.Add(new CommandType(AA_SolarOptimize_Name));
         }
         public int Value { get; private set; }
         public string Name { get; private set; }

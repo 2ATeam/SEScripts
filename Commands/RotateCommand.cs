@@ -47,7 +47,7 @@ namespace SE_Mods.CommandRunner.Commands
             float angle = float.Parse(PrimaryArgumentAngle.Value);
             bool cumulative = (PrimaryArgumentAngle.Type == ArgumentType.AA_ByAngle);
             float velocity = 0;
-            Argument velocityArg = arguments.GetValueOrDefault(ArgumentType.AA_Velocity);
+            Argument velocityArg = GetPrimaryArgument(ArgumentType.AA_Velocity);
             if (velocityArg != null) float.TryParse(velocityArg.Value, out velocity);
             if (PrimaryArgumentKey.Type == ArgumentType.AA_Group)
             {
