@@ -13,6 +13,10 @@ namespace SE_Mods.CommandRunner.Commands
         /// </summary>
         protected Argument PrimaryArgumentMemory { get; set; }
 
+        /// <summary>
+        /// TextPanel (LCD) used as memory storage.
+        /// </summary>
+        protected IMyTextPanel MemoryPanel { get; private set; }
 
         protected MemoryCommand(MyGridProgram environment, CommandType type, params Argument[] args) : base(environment, type, args) { }
 
@@ -21,18 +25,26 @@ namespace SE_Mods.CommandRunner.Commands
         /// </summary>
         protected override void Validate()
         {
-            PrimaryArgumentMemory = GetPrimaryArgument(ArgumentType.AA_Memory);
+            PrimaryArgumentMemory = GetPrimaryArgument(ArgumentType.Memory);
             if (PrimaryArgumentMemory == null)
             {
-                Log(string.Format("Missed memory argument ({0})", ArgumentType.AA_Memory));
+                Log(string.Format("Missed memory argument ({0})", ArgumentType.Memory));
                 IsValid = false;
                 return;
             }
         }
 
+        protected override void Prepare()
+        {
+            base.Prepare();
+            Argument memoryArg = GetPrimaryArgument(ArgumentType.Memory);
+            MemoryPanel = Environment.GridTerminalSystem.GetBlockWithName(memoryArg.Value) as IMyTextPanel;
+            if (MemoryPanel == null) { Environment.Echo(string.Format("Specified text panel (LCD) not found: {0}.", memoryArg.Value)); IsValid = false; }
+        }
+
         protected override bool IsAcceptableArgument(ArgumentType arg)
         {
-            return arg == ArgumentType.AA_Memory || base.IsAcceptableArgument(arg);
+            return arg == ArgumentType.Memory || base.IsAcceptableArgument(arg);
         }
 
         protected void Memorize(string varName, object value)
@@ -57,21 +69,14 @@ namespace SE_Mods.CommandRunner.Commands
         /// <summary>
         /// Retrieves memories array from primary memory storage block.
         /// </summary>
-        private List<string> ReadMemories()
-        {
-            IMyTextPanel panel = Environment.GridTerminalSystem.GetBlockWithName(PrimaryArgumentMemory.Value) as IMyTextPanel;
-            if (panel == null) { Environment.Echo(string.Format("Specified text panel (LCD) not found: {0}.", PrimaryArgumentMemory.Value)); return null; }
-            return new List<string>(Utils.GetLines(panel, Utils.HasTag(panel, Tag.AA_LogPublic)));
-        }
+        private List<string> ReadMemories() { return new List<string>(Utils.GetLines(MemoryPanel, Utils.HasTag(MemoryPanel, Tag.AA_LogPublic))); }
 
         private void WriteMemories(List<string> memories)
         {
-            IMyTextPanel panel = Environment.GridTerminalSystem.GetBlockWithName(PrimaryArgumentMemory.Value) as IMyTextPanel;
-            if (panel == null) { Environment.Echo(string.Format("Specified text panel (LCD) not found: {0}.", PrimaryArgumentMemory.Value)); return; }
-            bool isPublic = Utils.HasTag(panel, Tag.AA_LogPublic);
+            bool isPublic = Utils.HasTag(MemoryPanel, Tag.AA_LogPublic);
             string text = string.Join("\n", memories);
-            if (isPublic) panel.WritePublicText(text);
-            else panel.WritePrivateText(text);
+            if (isPublic) MemoryPanel.WritePublicText(text);
+            else MemoryPanel.WritePrivateText(text);
         }
 
         /// <summary>

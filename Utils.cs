@@ -20,15 +20,15 @@ namespace SE_Mods.CommandRunner
         /// <typeparam name="T">Type of dest blocks.</typeparam>
         /// <param name="blocks">List of all available blocks.</param>
         /// <returns>Returns list of blocks of specified type.</returns>
-        public static List<IMyTerminalBlock> GetBlocksOfType<T>(List<IMyTerminalBlock> blocks)
+        public static IMyTerminalBlock[] GetBlocksOfType<T>(IEnumerable<IMyTerminalBlock> blocks)
         {
             List<IMyTerminalBlock> result = new List<IMyTerminalBlock>();
             foreach (var block in blocks)
                 if ((T)block != null) result.Add(block);
-            return result;       
+            return result.ToArray();       
         }
 
-        // Really hope they will fix generics crash...
+        // Really hope they will fix generics crash... At least for now we have temp workaround with IMyTerminalBlock
         /// <summary>
         /// Finds blocks of given type which have specified tag.
         /// </summary>
@@ -36,14 +36,43 @@ namespace SE_Mods.CommandRunner
         /// <param name="tag">Filtering tag.</param>
         /// <param name="environment">Environment to look up blocks. </param>
         /// <returns>Returns either list of found blocks or empty list. </returns>
-        public static List<IMyTerminalBlock> GetBlocksWithTag<T>(string tag, MyGridProgram environment)
+        public static IMyTerminalBlock[] GetBlocksWithTag<T>(string tag, MyGridProgram environment)
         {
             List<IMyTerminalBlock> blocks = new List<IMyTerminalBlock>();
-            environment.GridTerminalSystem.GetBlocksOfType<T>(blocks);
-            environment.Echo(string.Format("Found {0} blocks of type {1}", blocks.Count, typeof(T).Name));
-            for (int i = blocks.Count - 1; i >= 0; i--)
-                if (!HasTag(blocks[i], tag)) blocks.Remove(blocks[i]);
-            return blocks;
+            if (environment != null)
+            {
+                environment.GridTerminalSystem.GetBlocksOfType<T>(blocks);
+                for (int i = blocks.Count - 1; i >= 0; i--)
+                    if (!HasTag(blocks[i], tag)) blocks.Remove(blocks[i]);
+            }
+            return blocks.ToArray();
+        }
+
+        /// <summary>
+        /// Searches 
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="searchKey"></param>
+        /// <param name="environment"></param>
+        /// <returns></returns>
+        public static IMyTerminalBlock[] FindBlocks<T>(string searchKey, MyGridProgram environment)
+        {
+            if (environment != null)
+            {
+                IMyTerminalBlock block = environment.GridTerminalSystem.GetBlockWithName(searchKey);
+                if (block != null && ((T)block != null)) return new IMyTerminalBlock[] { block };
+                else
+                {
+                    IMyBlockGroup group = environment.GridTerminalSystem.GetBlockGroupWithName(searchKey);
+                    if (group != null) return GetBlocksOfType<T>(group.Blocks);
+                    else
+                    {
+                        IMyTerminalBlock[] blocks = GetBlocksWithTag<T>(searchKey, environment);
+                        if (blocks.Length > 0) return blocks;
+                    }
+                }
+            }
+            return null;
         }
 
 

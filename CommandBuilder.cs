@@ -42,9 +42,9 @@ namespace SE_Mods.CommandRunner
 
         private static Command GetCommand(MyGridProgram environment, CommandType type, params Argument[] args)
         {
-            if (type == CommandType.AA_Rotate) return new RotateCommand(environment, args);
-            if (type == CommandType.AA_Console) return new ConsoleCommand(environment, args);
-            if (type == CommandType.AA_SolarOptimize) return new SolarOptimizeCommand(environment, args);
+            if (type == CommandType.Rotate) return new RotateCommand(environment, args);
+            if (type == CommandType.Console) return new ConsoleCommand(environment, args);
+            if (type == CommandType.SolarOptimize) return new SolarOptimizeCommand(environment, args);
             return null;
         }
     }

@@ -7,7 +7,7 @@ namespace SE_Mods.CommandRunner.Commands
     {
         private const string VAR_TEST = "TestVar";
 
-        public SolarOptimizeCommand(MyGridProgram environment, params Argument[] args) : base(environment, CommandType.AA_SolarOptimize, args) { }
+        public SolarOptimizeCommand(MyGridProgram environment, params Argument[] args) : base(environment, CommandType.SolarOptimize, args) { }
 
         public override void Run(MyGridProgram environment = null)
         {

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Sandbox.ModAPI.Ingame;
+using Sandbox.ModAPI.Interfaces;
 
 namespace SE_Mods.CommandRunner.Commands
 {
@@ -14,12 +15,12 @@ namespace SE_Mods.CommandRunner.Commands
         /// <summary>
         /// Argument which is used to identify target blocks.
         /// </summary>
-        protected Argument PrimaryArgumentKey { get; set; }
+        protected IMyTerminalBlock[] Targets { get; set; }
 
         /// <summary>
         /// Argument which is used to identify log output panels.
         /// </summary>
-        private Argument PrimaryArgumentLog { get; set; }
+        private IMyTextPanel[] LogPanels { get; set; }
 
         /// <summary>
         /// Type of the command.
@@ -53,22 +54,49 @@ namespace SE_Mods.CommandRunner.Commands
                 if (IsAcceptableArgument(arg.Type))
                     arguments.Add(arg.Type, arg);
             }
-            IsValid = true;
+            IsValid = true;          
+            PrepareLog();
             Validate();
+            if (IsValid)
+                Prepare();
         }
 
         /// <summary>
-        /// Checks whether this command is setup and ready to run.
+        /// This is internal Prepare() method used to prepare logging before any other arguments. To allow using logging in main Prepare() method.
+        /// </summary>
+        private void PrepareLog()
+        {
+            Argument log = GetPrimaryArgument(ArgumentType.Log);
+            if (log != null)
+            {
+                IMyTerminalBlock[] panels = Utils.FindBlocks<IMyTextPanel>(log.Value, Environment);
+                if (panels == null || panels.Length == 0) { Environment.Echo(string.Format("Couldn't find any TextPanel/LCD with log key {0}.", log.Value));}
+                else LogPanels = Array.ConvertAll(panels, block => block as IMyTextPanel);
+                
+            }
+            else Environment.Echo("Log output wasn't set.");
+        }
+
+        /// <summary>
+        /// Prepares command for execution. <para/>
+        /// Note: This is a good place to read arguments and 
+        /// </summary>
+        protected virtual void Prepare()
+        {
+            Argument target = GetPrimaryArgument(ArgumentType.Target);
+            IMyTerminalBlock[] blocks = Utils.FindBlocks<IMyTerminalBlock>(target.Value, Environment);
+            if (blocks == null || blocks.Length == 0) { Environment.Echo(string.Format("Couldn't find any target blocks with key {0}.", target.Value)); IsValid = false;}
+            else Targets = blocks;
+        }
+
+        /// <summary>
+        /// Validates all received arguments. <para/>
+        /// Note: This is a right place to check is there any required arguments missing.
         /// </summary>
         protected virtual void Validate()
         {
-            PrimaryArgumentKey = GetPrimaryArgument(ArgumentType.AA_Group, ArgumentType.AA_Name, ArgumentType.AA_Tag);
-            PrimaryArgumentLog = GetPrimaryArgument(ArgumentType.AA_LogGroup, ArgumentType.AA_LogName, ArgumentType.AA_LogTag);
-            if (PrimaryArgumentKey == null)
-            {
-                Log(string.Format("Missed search key argument (at least one of {0}/{1}/{2} must be set)", ArgumentType.AA_Group, ArgumentType.AA_Name, ArgumentType.AA_Tag));
-                IsValid = false;
-            }
+            IsValid &= GetPrimaryArgument(ArgumentType.Target) != null;
+            if (!IsValid) Log(string.Format("Missed {0} argument", ArgumentType.Target));
         }
 
 
@@ -86,7 +114,6 @@ namespace SE_Mods.CommandRunner.Commands
                 Argument arg = arguments.GetValueOrDefault(primary);
                 if (arg != null) return arg;
             }
-
             return null;
         }
 
@@ -103,7 +130,7 @@ namespace SE_Mods.CommandRunner.Commands
         /// <returns>Returns flag indicating whether this argument type acceptable or not.</returns>
         protected virtual bool IsAcceptableArgument(ArgumentType arg)
         {
-            return (arg == ArgumentType.AA_Group || arg == ArgumentType.AA_Name || arg == ArgumentType.AA_Tag || arg == ArgumentType.AA_LogGroup || arg == ArgumentType.AA_LogName || arg == ArgumentType.AA_LogTag || arg == ArgumentType.AA_LogLines);
+            return (arg == ArgumentType.Target || arg == ArgumentType.Log);
         }
 
        /// <summary>
@@ -116,17 +143,11 @@ namespace SE_Mods.CommandRunner.Commands
             if (panel != null)
             {
                 bool isPublic = Utils.HasTag(panel, Tag.AA_LogPublic);
-                const int LOG_LINES = 22;
+                const int LOG_LINES = 17; // default number of lines with fontSize = 1.0f;
+                float font = panel.GetValue<float>("FontSize");
+                int logLines = (int)Math.Floor(LOG_LINES / font);
                 panel.SetShowOnScreen(isPublic ? VRage.Game.GUI.TextPanel.ShowTextOnScreenFlag.PUBLIC : VRage.Game.GUI.TextPanel.ShowTextOnScreenFlag.PRIVATE);
                 List<string> lines = new List<string>(Utils.GetLines(panel, isPublic));
-                Argument logLinesArg = GetPrimaryArgument(ArgumentType.AA_LogLines);
-                int logLines = LOG_LINES;
-                if (logLinesArg != null)
-                {
-                    int.TryParse(logLinesArg.Value, out logLines);
-                    Environment.Echo(string.Format("Found Log param : {1} = {0}.", logLinesArg.Value, logLinesArg.Type));
-                }
-                if (logLines <= 0) logLines = LOG_LINES;
                 Environment.Echo(string.Format("LOG LINES : {0}.", logLines));
                 lines.Add(string.Format("[{0}] : {1}", DateTime.Now.ToLongTimeString(), message));
                 while (lines.Count > logLines) lines.RemoveAt(0);
@@ -137,7 +158,7 @@ namespace SE_Mods.CommandRunner.Commands
             
         }
 
-        private void ChainLog(string message, List<IMyTextPanel> panels)
+        private void ChainLog(string message, IMyTextPanel[] panels)
         {
             foreach (var panel in panels)
                 LogToPanel(panel, message);
@@ -150,26 +171,9 @@ namespace SE_Mods.CommandRunner.Commands
         protected void Log(string message)
         {
             Environment.Echo(message);
-            if (PrimaryArgumentLog == null) { Environment.Echo("Log output wasn't set."); return; }
-
-            if (PrimaryArgumentLog.Type == ArgumentType.AA_LogGroup)
-            {
-                //IMyBlockGroup group = Environment.GridTerminalSystem.GetBlockGroupWithName(PrimaryArgumentLog.Value);
-                //if (group != null) ChainLog(message, Utils.GetBlocksOfType<IMyTextPanel>(group.Blocks));
-                //else Environment.Echo(string.Format("Specified text panels (LCDs) group not found: {0}", PrimaryArgumentLog.Value));
-            }
-            else if (PrimaryArgumentLog.Type == ArgumentType.AA_LogName)
-            {
-                IMyTextPanel panel = Environment.GridTerminalSystem.GetBlockWithName(PrimaryArgumentLog.Value) as IMyTextPanel;
-                if (panel != null) LogToPanel(panel, message);
-                else Environment.Echo(string.Format("Specified text panel (LCD) not found: {0}.", PrimaryArgumentLog.Value));
-            }
-            else if (PrimaryArgumentLog.Type == ArgumentType.AA_LogTag)
-            {
-                List<IMyTerminalBlock> panels = Utils.GetBlocksWithTag<IMyTextPanel>(PrimaryArgumentLog.Value, Environment);
-                if (panels.Count != 0) ChainLog(message, panels.ConvertAll(block => block as IMyTextPanel));
-                else Environment.Echo(string.Format("No text panels (LCDs) with tag \"{0}\" were found.", PrimaryArgumentLog.Value));
-            }
+            if (LogPanels == null) return;
+            if (LogPanels.Length == 1) LogToPanel(LogPanels[0], message);
+            else ChainLog(message, LogPanels);
         }
 
         public override string ToString()
@@ -177,9 +181,7 @@ namespace SE_Mods.CommandRunner.Commands
             List<Argument> args = new List<Argument>(Arguments);
             string output = Type.ToString() + " [";
             for (int i = 0; i < args.Count; ++i)
-            {
                 output += args[i].ToString() + "; ";
-            }
             output = output.TrimEnd(new char[] { ' ', ';' }) + "]";
             return output;
         }
